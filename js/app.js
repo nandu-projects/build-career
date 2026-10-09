@@ -90,6 +90,13 @@ const App = {
   },
 
   setupShortcuts() {
+    const aiHeroBtn = document.getElementById('home-ai-companion-btn');
+    if (aiHeroBtn) {
+      aiHeroBtn.addEventListener('click', () => {
+        this.switchTab('ai');
+      });
+    }
+
     document.querySelectorAll('[data-shortcut]').forEach(chip => {
       chip.addEventListener('click', (e) => {
         const target = e.currentTarget.dataset.shortcut;

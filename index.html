@@ -5,7 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Build Career</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=2.0.0">
+  <script>
+    // Invalidate stale WebView caches and unregister stale service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        for (var r of regs) { r.unregister(); }
+      }).catch(function() {});
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        for (var n of names) { caches.delete(n); }
+      }).catch(function() {});
+    }
+  </script>
 </head>
 <body>
   <div class="app-container">
@@ -46,12 +59,36 @@
         </div>
       </div>
 
-      <!-- Quick Shortcuts -->
-      <div class="shortcuts-row">
-        <div class="shortcut-chip" data-shortcut="timer">⏱️ Study Timer</div>
-        <div class="shortcut-chip" data-shortcut="notes">📝 Saved Notes</div>
-        <div class="shortcut-chip" data-shortcut="projects">💼 Projects</div>
-        <div class="shortcut-chip" data-shortcut="hackathon">🚀 Hackathon Coach</div>
+      <!-- AI Companion Direct Shortcut Hero Card -->
+      <section class="ai-companion-hero" id="home-ai-companion-btn">
+        <div class="ai-hero-content">
+          <h4>🤖 AI Companion & Mentor</h4>
+          <p>Instant answers on code, cybersecurity, voice & photo analysis</p>
+        </div>
+        <div class="ai-hero-action">Open Chat →</div>
+      </section>
+
+      <!-- Explore Shortcuts: 2x2 Grid (No overflow, no cut-off) -->
+      <div class="section-header">
+        <h3>Explore & Workspace</h3>
+      </div>
+      <div class="explore-grid">
+        <div class="explore-item" data-shortcut="timer">
+          <div class="explore-icon">⏱️</div>
+          <div class="explore-label">Study Timer</div>
+        </div>
+        <div class="explore-item" data-shortcut="notes">
+          <div class="explore-icon">📝</div>
+          <div class="explore-label">Saved Notes</div>
+        </div>
+        <div class="explore-item" data-shortcut="projects">
+          <div class="explore-icon">💼</div>
+          <div class="explore-label">Projects</div>
+        </div>
+        <div class="explore-item" data-shortcut="hackathon">
+          <div class="explore-icon">🚀</div>
+          <div class="explore-label">Hackathon Coach</div>
+        </div>
       </div>
 
       <!-- Four Learning Tracks Section -->
