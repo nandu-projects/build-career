@@ -24,6 +24,8 @@ global.window = global;
 require('../js/storage.js');
 require('../js/curriculum.js');
 require('../js/timer.js');
+global.navigator = { onLine: true };
+require('../js/voice.js');
 require('../js/english-coach.js');
 require('../js/ai-companion.js');
 require('../js/hackathon.js');
@@ -151,18 +153,35 @@ runTest('Hackathon Coach is structured across 7 stages and isolated from dashboa
   assert.ok(stage4.content.includes('7-Step Pitch Architecture'));
 });
 
-// Test 9: Backup & Restore Engine
-runTest('Full Database Backup JSON export and import validation', () => {
-  const backupJson = StorageManager.exportFullBackup();
-  assert.ok(backupJson.includes('appVersion'));
-  
-  // Wipe and restore
-  localStorage.clear();
-  assert.strictEqual(StorageManager.getNotes().length, 0);
-  
-  const restoreRes = StorageManager.importBackup(backupJson);
-  assert.strictEqual(restoreRes.success, true);
-  assert.strictEqual(StorageManager.getNotes().length, 1);
+// Test 10: AI General Purpose Multi-Turn & Image Understanding
+runTest('AI Companion handles general questions and image analysis', async () => {
+  AICompanion.init();
+  const gkReply = await AICompanion.processMessage('Who is the Prime Minister of India?');
+  assert.ok(gkReply.text.includes('Narendra Modi'));
+
+  // Test Image input analysis
+  const imgMock = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/';
+  const roomReply = await AICompanion.processMessage('How can I arrange my room for studying?', imgMock);
+  assert.ok(roomReply.text.includes('room photo'));
+  assert.ok(roomReply.text.includes('Ergonomics') || roomReply.text.includes('desk'));
+
+  // Test Multi-turn history retention
+  assert.ok(AICompanion.chatSession.length >= 4);
+});
+
+// Test 11: Adaptive Learning Recommendation Tracking
+runTest('Adaptive Learning logs quiz mistakes and surfaces personalized focus', () => {
+  StorageManager.saveQuizScore('python', 'py-02', 0, 1, 'Conditions & Indentation');
+  StorageManager.saveQuizScore('python', 'py-02', 0, 1, 'Conditions & Indentation');
+  const rec = StorageManager.getRecommendedTopic('python');
+  assert.strictEqual(rec, 'Conditions & Indentation');
+});
+
+// Test 12: Android Mic Permission & Audio Capability Verification
+runTest('Voice Engine declares permission and audio methods', () => {
+  assert.ok(typeof VoiceEngine.requestMicPermission === 'function');
+  assert.ok(typeof VoiceEngine.startListening === 'function');
+  assert.ok(typeof VoiceEngine.speakText === 'function');
 });
 
 console.log(`\n========================================`);

@@ -164,6 +164,22 @@ const App = {
         });
         container.appendChild(card);
       });
+
+      // Adaptive Learning Recommendation Card
+      const recTopic = StorageManager.getRecommendedTopic('python') || StorageManager.getRecommendedTopic('cybersecurity');
+      if (recTopic) {
+        const recCard = document.createElement('div');
+        recCard.className = 'track-card';
+        recCard.style.borderLeft = '3px solid var(--warning)';
+        recCard.innerHTML = `
+          <div class="track-header">
+            <span class="track-title">💡 Personalized Revision Focus</span>
+            <span style="font-size:0.75rem; color:var(--warning)">Adaptive Suggestion</span>
+          </div>
+          <div class="track-desc">Based on previous quiz checks, we recommend practicing <strong>${recTopic}</strong> again to reinforce mastery.</div>
+        `;
+        container.prepend(recCard);
+      }
     }
   },
 
@@ -294,6 +310,9 @@ const App = {
           } else {
             feedback.style.color = 'var(--warning)';
             feedback.textContent = `Incorrect. Try again! Hint: ${lesson.quiz.explanation}`;
+            // Log mistake concept for personalized adaptive review
+            StorageManager.saveQuizScore(trackKey, lesson.id, 0, 1, lesson.title);
+            this.renderDashboard();
           }
         });
       });
@@ -373,26 +392,114 @@ const App = {
   },
 
   // 4. AI Companion Chat & Tool UI
+  attachedImageBase64: null,
+
   setupChatUI() {
     const sendBtn = document.getElementById('ai-send-btn');
     const input = document.getElementById('ai-chat-input');
-    const historyContainer = document.getElementById('ai-chat-history');
+    const attachBtn = document.getElementById('btn-attach-image');
+    const fileInput = document.getElementById('chat-image-input');
+    const previewContainer = document.getElementById('chat-attachment-preview');
+    const thumbImg = document.getElementById('attachment-thumb');
+    const removeAttachBtn = document.getElementById('btn-remove-attachment');
+    const newChatBtn = document.getElementById('btn-new-chat');
+    const micBtn = document.getElementById('btn-chat-mic');
+    const listeningStatus = document.getElementById('chat-listening-status');
+
+    // Restore saved chat history
+    const history = StorageManager.getChatHistory();
+    if (history && history.length > 0) {
+      const historyContainer = document.getElementById('ai-chat-history');
+      if (historyContainer) {
+        historyContainer.innerHTML = '';
+        history.forEach(item => {
+          this.appendChatMessage(item.role === 'assistant' ? 'ai' : 'user', item.text, item.image);
+        });
+      }
+    }
+
+    if (newChatBtn) {
+      newChatBtn.addEventListener('click', () => {
+        if (confirm('Start a new conversation? Previous history will be cleared.')) {
+          AICompanion.clearSession();
+          const historyContainer = document.getElementById('ai-chat-history');
+          if (historyContainer) {
+            historyContainer.innerHTML = `
+              <div class="chat-bubble ai">
+                Started a new conversation. What would you like to explore or analyze today?
+              </div>
+            `;
+          }
+          this.showToast('New chat started.');
+        }
+      });
+    }
+
+    // Attachment flow
+    if (attachBtn && fileInput) {
+      attachBtn.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+          alert('Please select an image file (PNG, JPG, WebP).');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (loadEvent) => {
+          this.attachedImageBase64 = loadEvent.target.result;
+          thumbImg.src = this.attachedImageBase64;
+          previewContainer.style.display = 'flex';
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    if (removeAttachBtn) {
+      removeAttachBtn.addEventListener('click', () => {
+        this.attachedImageBase64 = null;
+        fileInput.value = '';
+        previewContainer.style.display = 'none';
+      });
+    }
 
     const handleSend = async () => {
       const msg = (input.value || '').trim();
-      if (!msg) return;
+      const img = this.attachedImageBase64;
 
-      this.appendChatMessage('user', msg);
+      if (!msg && !img) return;
+
+      this.appendChatMessage('user', msg || 'Attached image for review', !!img, img);
       input.value = '';
+      this.attachedImageBase64 = null;
+      if (fileInput) fileInput.value = '';
+      if (previewContainer) previewContainer.style.display = 'none';
 
-      // Typing feedback
-      const aiReply = await AICompanion.processMessage(msg);
-      this.appendChatMessage('ai', aiReply.text);
+      // Show typing indicator
+      const typingId = 'typing-' + Date.now();
+      const historyContainer = document.getElementById('ai-chat-history');
+      const typingBubble = document.createElement('div');
+      typingBubble.id = typingId;
+      typingBubble.className = 'chat-bubble ai';
+      typingBubble.textContent = 'Thinking...';
+      historyContainer.appendChild(typingBubble);
+      historyContainer.scrollTop = historyContainer.scrollHeight;
 
-      // Play audio if voice speaking is enabled
-      const settings = StorageManager.getSettings();
-      if (!settings.offlineMode) {
-        VoiceEngine.speakText(aiReply.text);
+      try {
+        const aiReply = await AICompanion.processMessage(msg, img);
+        typingBubble.remove();
+        this.appendChatMessage('ai', aiReply.text);
+
+        const settings = StorageManager.getSettings();
+        if (!settings.offlineMode) {
+          VoiceEngine.speakText(aiReply.text);
+        }
+      } catch (e) {
+        typingBubble.textContent = 'Failed to generate response. Please try again.';
+        typingBubble.style.borderColor = 'var(--danger)';
       }
     };
 
@@ -402,44 +509,71 @@ const App = {
         if (e.key === 'Enter') handleSend();
       });
     }
+
+    // Voice button inside chat
+    if (micBtn) {
+      micBtn.addEventListener('click', () => {
+        if (VoiceEngine.isListening) {
+          VoiceEngine.stopListening();
+          if (listeningStatus) listeningStatus.style.display = 'none';
+          micBtn.style.color = 'var(--text-secondary)';
+        } else {
+          micBtn.style.color = 'var(--danger)';
+          if (listeningStatus) listeningStatus.style.display = 'block';
+          VoiceEngine.startListening(
+            (transcript, isFinal) => {
+              if (input) input.value = transcript;
+            },
+            () => {
+              if (listeningStatus) listeningStatus.style.display = 'none';
+              micBtn.style.color = 'var(--text-secondary)';
+              if (input.value) handleSend();
+            },
+            (err) => {
+              if (listeningStatus) listeningStatus.style.display = 'none';
+              micBtn.style.color = 'var(--text-secondary)';
+              this.showToast(`Voice: ${err}`);
+            }
+          );
+        }
+      });
+    }
   },
 
-  appendChatMessage(role, text) {
+  appendChatMessage(role, text, hasImage = false, imageSrc = null) {
     const historyContainer = document.getElementById('ai-chat-history');
     if (!historyContainer) return;
 
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${role}`;
-    bubble.textContent = text;
+
+    if (hasImage && imageSrc) {
+      const imgEl = document.createElement('img');
+      imgEl.src = imageSrc;
+      imgEl.style.maxWidth = '100%';
+      imgEl.style.maxHeight = '200px';
+      imgEl.style.borderRadius = '8px';
+      imgEl.style.display = 'block';
+      imgEl.style.marginBottom = '6px';
+      bubble.appendChild(imgEl);
+    }
+
+    const textSpan = document.createElement('div');
+    textSpan.style.whiteSpace = 'pre-wrap';
+    textSpan.textContent = text;
+    bubble.appendChild(textSpan);
+
     historyContainer.appendChild(bubble);
     historyContainer.scrollTop = historyContainer.scrollHeight;
   },
 
   setupVoiceUI() {
-    const micBtn = document.getElementById('ai-voice-mic-btn');
-    if (micBtn) {
-      micBtn.addEventListener('click', () => {
-        if (VoiceEngine.isListening) {
-          VoiceEngine.stopListening();
-          micBtn.style.backgroundColor = 'var(--accent-blue)';
-        } else {
-          micBtn.style.backgroundColor = 'var(--danger)';
-          VoiceEngine.startListening(
-            (transcript, isFinal) => {
-              const input = document.getElementById('ai-chat-input');
-              if (input) input.value = transcript;
-            },
-            () => {
-              micBtn.style.backgroundColor = 'var(--accent-blue)';
-              const sendBtn = document.getElementById('ai-send-btn');
-              if (sendBtn) sendBtn.click();
-            },
-            (err) => {
-              micBtn.style.backgroundColor = 'var(--accent-blue)';
-              this.showToast(`Voice: ${err}`);
-            }
-          );
-        }
+    const centralMicBtn = document.getElementById('ai-voice-mic-btn');
+    if (centralMicBtn) {
+      centralMicBtn.addEventListener('click', () => {
+        this.switchTab('ai');
+        const chatMic = document.getElementById('btn-chat-mic');
+        if (chatMic) chatMic.click();
       });
     }
   },
@@ -653,6 +787,10 @@ const App = {
   renderProfileSettings() {
     const settings = StorageManager.getSettings();
     const voiceSelect = document.getElementById('setting-voice-select');
+    const aiProviderSelect = document.getElementById('setting-ai-provider');
+    const aiKeyInput = document.getElementById('setting-ai-key');
+    const aiKeyContainer = document.getElementById('ai-key-container');
+
     if (voiceSelect) {
       const voices = VoiceEngine.getAvailableVoiceOptions();
       voiceSelect.innerHTML = voices.map(v => `
@@ -667,6 +805,37 @@ const App = {
           StorageManager.saveSettings(settings);
           this.showToast(`Selected voice: ${v.name}`);
         }
+      });
+    }
+
+    if (aiProviderSelect) {
+      const currentProvider = settings.aiConfig?.provider || 'offline_assistant';
+      aiProviderSelect.value = currentProvider;
+      if (aiKeyContainer) {
+        aiKeyContainer.style.display = currentProvider !== 'offline_assistant' ? 'block' : 'none';
+      }
+      if (aiKeyInput && settings.aiConfig?.apiKey) {
+        aiKeyInput.value = settings.aiConfig.apiKey;
+      }
+
+      aiProviderSelect.addEventListener('change', (e) => {
+        const prov = e.target.value;
+        if (!settings.aiConfig) settings.aiConfig = {};
+        settings.aiConfig.provider = prov;
+        if (aiKeyContainer) {
+          aiKeyContainer.style.display = prov !== 'offline_assistant' ? 'block' : 'none';
+        }
+        StorageManager.saveSettings(settings);
+        this.showToast(`AI Engine set to: ${e.target.options[e.target.selectedIndex].text}`);
+      });
+    }
+
+    if (aiKeyInput) {
+      aiKeyInput.addEventListener('change', (e) => {
+        if (!settings.aiConfig) settings.aiConfig = {};
+        settings.aiConfig.apiKey = e.target.value.trim();
+        StorageManager.saveSettings(settings);
+        this.showToast('API Key saved locally on device.');
       });
     }
   },

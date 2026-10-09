@@ -32,6 +32,12 @@ const DEFAULT_SETTINGS = {
     pitch: 1.0,
     lang: 'en-IN'
   },
+  aiConfig: {
+    provider: 'free_gemini', // 'free_gemini' | 'openrouter' | 'offline_assistant'
+    apiKey: '', // Optional user-provided free Gemini or OpenRouter key
+    modelName: 'gemini-1.5-flash',
+    systemPrompt: 'You are Build Career AI, a helpful, brilliant, supportive senior engineer and mentor for a B.E. CSE-CY student. You answer coding, cyber, AI, placements, general questions, photo/image analysis, and daily life questions naturally and directly.'
+  },
   memoryEnabled: true,
   offlineMode: false,
   userName: 'Nandan'
@@ -192,15 +198,33 @@ const StorageManager = {
     this.saveTrackProgress(trackKey, progress);
   },
 
-  saveQuizScore(trackKey, lessonId, score, total) {
+  saveQuizScore(trackKey, lessonId, score, total, mistakeConcept = null) {
     const progress = this.getTrackProgress(trackKey);
     if (!progress.quizScores) progress.quizScores = {};
     progress.quizScores[lessonId] = { score, total, timestamp: new Date().toISOString() };
     if (score >= Math.ceil(total * 0.7)) {
       if (!progress.completedLessons) progress.completedLessons = {};
       progress.completedLessons[lessonId] = true;
+    } else if (mistakeConcept) {
+      if (!progress.mistakeLog) progress.mistakeLog = {};
+      progress.mistakeLog[mistakeConcept] = (progress.mistakeLog[mistakeConcept] || 0) + 1;
     }
     this.saveTrackProgress(trackKey, progress);
+  },
+
+  getRecommendedTopic(trackKey) {
+    const progress = this.getTrackProgress(trackKey);
+    const mistakes = progress.mistakeLog || {};
+    // Find most frequent mistake
+    let topMistake = null;
+    let maxCount = 0;
+    for (const [concept, count] of Object.entries(mistakes)) {
+      if (count > maxCount) {
+        maxCount = count;
+        topMistake = concept;
+      }
+    }
+    return topMistake;
   },
 
   // Notes
