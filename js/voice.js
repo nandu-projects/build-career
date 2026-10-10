@@ -77,6 +77,7 @@ const VoiceEngine = {
   },
 
   async startListening(onResultCallback, onEndCallback, onErrorCallback) {
+    if (this.isListening) return true;
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRec) {
       if (onErrorCallback) onErrorCallback('Speech recognition is not supported in this WebView. Please use text input or grant microphone access.');
@@ -127,18 +128,23 @@ const VoiceEngine = {
     } catch (e) {
       console.error('Error starting speech recognition:', e);
       this.isListening = false;
-      if (onErrorCallback) onErrorCallback(e.message);
+      this.recognition = null;
+      if (onErrorCallback) onErrorCallback(e.message || 'Unable to start speech recognition.');
       return false;
     }
   },
 
   stopListening() {
-    if (this.recognition && this.isListening) {
-      try {
-        this.recognition.stop();
-      } catch (e) {}
-    }
+    const activeRecognition = this.recognition;
     this.isListening = false;
+    this.recognition = null;
+    if (activeRecognition) {
+      try {
+        activeRecognition.stop();
+      } catch (e) {
+        try { activeRecognition.abort(); } catch (ignored) {}
+      }
+    }
   },
 
   speakText(text, onStart, onEnd) {

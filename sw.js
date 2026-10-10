@@ -1,5 +1,5 @@
 // Build Career - Service Worker (Safe cache update strategy)
-const CACHE_NAME = 'build-career-v2';
+const CACHE_NAME = 'build-career-v3';
 
 self.addEventListener('install', event => {
   self.skipWaiting();

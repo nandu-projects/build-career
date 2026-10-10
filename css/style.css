@@ -10,7 +10,7 @@
    ========================================================================== */
 
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   
   --bg-primary: #0B0F19;
   --bg-surface: #131B2E;
@@ -45,12 +45,26 @@
   --bottom-nav-height: 64px;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
-  font-family: var(--font-sans) !important;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center, dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend, table, caption,
+tbody, tfoot, thead, tr, th, td, article, aside,
+canvas, details, embed, figure, figcaption, footer,
+header, hgroup, menu, nav, output, ruby, section,
+summary, time, mark, audio, video, input, textarea, select, button {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
 }
 
 html, body {
@@ -483,20 +497,42 @@ html, body {
   border-color: var(--accent-blue);
 }
 
-/* Chat Layout (Clean ChatGPT Style) */
+/* Chat Layout (mobile-safe, with input kept above bottom navigation) */
+#tab-ai.active {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#tab-ai > .section-header {
+  flex: 0 0 auto;
+}
+
 .chat-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 180px);
+  flex: 1 1 auto;
+  min-height: 320px;
+  height: calc(100vh - 220px - env(safe-area-inset-bottom, 0px));
+  height: calc(100dvh - 220px - env(safe-area-inset-bottom, 0px));
+  max-height: 780px;
+  overflow: hidden;
 }
 
 .chat-history {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 8px 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+#chat-attachment-preview[style*="display: none"] {
+  display: none !important;
 }
 
 .chat-bubble {
@@ -505,6 +541,7 @@ html, body {
   border-radius: var(--radius-md);
   font-size: 0.85rem;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .chat-bubble.user {
@@ -523,10 +560,16 @@ html, body {
 }
 
 .chat-input-bar {
+  flex: 0 0 auto;
   display: flex;
   gap: 6px;
-  padding-top: 8px;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
   align-items: center;
+  background: var(--bg-primary);
+}
+
+.chat-input-bar .input-field {
+  min-width: 0;
 }
 
 /* Code block & task boxes */

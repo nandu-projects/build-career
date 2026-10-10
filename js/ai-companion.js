@@ -86,23 +86,34 @@ const AICompanion = {
     const settings = StorageManager.getSettings();
     const aiConfig = settings.aiConfig || {};
 
+    let fallbackReason = '';
     if (navigator.onLine && aiConfig.apiKey) {
       try {
         const onlineReply = await this.callOnlineModel(rawText, imageBase64, aiConfig);
         if (onlineReply) {
           this.recordTurn(rawText, onlineReply, imageBase64);
-          return { text: onlineReply };
+          return { text: onlineReply, source: 'online-ai' };
         }
+        fallbackReason = 'The online AI returned no answer.';
       } catch (err) {
-        console.warn('Online AI request failed, falling back to local reasoning:', err);
-        // Continue to offline fallback below with clear context
+        console.warn('Online AI request failed, falling back to local responses:', err);
+        fallbackReason = 'The online AI request failed (' + (err.message || 'unknown error') + ').';
       }
+    } else {
+      fallbackReason = navigator.onLine
+        ? 'No online AI API key is configured.'
+        : 'No internet connection is available.';
     }
 
-    // 3. High-capability Local Fallback Engine (Zero cost, offline-ready)
-    const offlineReply = this.generateLocalResponse(rawText, imageBase64);
+    // Local fallback is deliberately limited and must never claim to have seen/analyzed image pixels.
+    let offlineReply = this.generateLocalResponse(rawText, imageBase64);
+    if (imageBase64) {
+      offlineReply = 'Offline mode cannot actually analyze image contents. Connect to the internet and configure a vision-capable AI API to analyze this image.\n\n' +
+        (rawText ? 'Your question: ' + rawText : 'Please add a question about the image when online AI is available.');
+    }
+    offlineReply = 'OFFLINE FALLBACK — ' + fallbackReason + '\n\n' + offlineReply;
     this.recordTurn(rawText, offlineReply, imageBase64);
-    return { text: offlineReply };
+    return { text: offlineReply, source: 'offline-fallback', reason: fallbackReason };
   },
 
   recordTurn(userText, aiText, image = null) {

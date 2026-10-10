@@ -154,7 +154,7 @@ runTest('Hackathon Coach is structured across 7 stages and isolated from dashboa
 });
 
 // Test 10: AI General Purpose Multi-Turn & Image Understanding
-runTest('AI Companion handles general questions and image analysis', async () => {
+runTest('AI Companion handles general questions and honestly reports offline image limitations', async () => {
   AICompanion.init();
   const gkReply = await AICompanion.processMessage('Who is the Prime Minister of India?');
   assert.ok(gkReply.text.includes('Narendra Modi'));
@@ -162,8 +162,9 @@ runTest('AI Companion handles general questions and image analysis', async () =>
   // Test Image input analysis
   const imgMock = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/';
   const roomReply = await AICompanion.processMessage('How can I arrange my room for studying?', imgMock);
-  assert.ok(roomReply.text.includes('room photo'));
-  assert.ok(roomReply.text.includes('Ergonomics') || roomReply.text.includes('desk'));
+  assert.ok(roomReply.text.includes('OFFLINE FALLBACK'));
+  assert.ok(roomReply.text.includes('cannot actually analyze image contents'));
+  assert.ok(!roomReply.text.includes('I have received and inspected your attached image')); 
 
   // Test Multi-turn history retention
   assert.ok(AICompanion.chatSession.length >= 4);

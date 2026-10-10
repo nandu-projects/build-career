@@ -29,6 +29,10 @@ public class MainActivity extends BridgeActivity {
     private void setupWebViewChromeClient() {
         if (getBridge() != null && getBridge().getWebView() != null) {
             WebView webView = getBridge().getWebView();
+            webView.clearCache(true);
+            if (webView.getSettings() != null) {
+                webView.getSettings().setCacheMode(android.webkit.WebSettings.LOAD_DEFAULT);
+            }
             webView.setWebChromeClient(new WebChromeClient() {
                 @Override
                 public void onPermissionRequest(final PermissionRequest request) {

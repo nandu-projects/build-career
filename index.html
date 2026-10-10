@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Build Career</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/style.css?v=2.0.0">
+  <link rel="stylesheet" href="css/style.css?v=2.2.0">
   <script>
     // Invalidate stale WebView caches and unregister stale service worker
     if ('serviceWorker' in navigator) {
@@ -124,7 +124,7 @@
         </div>
 
         <!-- Attachment Preview Bar -->
-        <div id="chat-attachment-preview" style="display:none; padding:8px; background:var(--bg-card); border-top:1px solid var(--border-subtle); display:flex; align-items:center; gap:8px;">
+        <div id="chat-attachment-preview" style="display:none; padding:8px; background:var(--bg-card); border-top:1px solid var(--border-subtle); align-items:center; gap:8px;">
           <img id="attachment-thumb" src="" alt="Preview" style="width:48px; height:48px; object-fit:cover; border-radius:6px; border:1px solid var(--border-subtle);">
           <span style="font-size:0.8rem; color:var(--text-secondary); flex:1;">Image attached</span>
           <button id="btn-remove-attachment" class="icon-btn" style="width:28px; height:28px;" title="Remove image">&times;</button>
@@ -357,12 +357,12 @@
   <!-- Core Scripts -->
   <script src="js/storage.js"></script>
   <script src="js/curriculum.js"></script>
-  <script src="js/voice.js"></script>
+  <script src="js/voice.js?v=2.2.0"></script>
   <script src="js/english-coach.js"></script>
-  <script src="js/ai-companion.js"></script>
+  <script src="js/ai-companion.js?v=2.2.0"></script>
   <script src="js/hackathon.js"></script>
   <script src="js/timer.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=2.2.0"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW reg fail:', err));
