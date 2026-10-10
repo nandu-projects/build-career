@@ -35,7 +35,7 @@ for (const file of filesToCopy) {
   }
 }
 
-const dirsToCopy = ['css', 'js', 'icons'];
+const dirsToCopy = ['css', 'js', 'icons', 'fonts'];
 for (const dir of dirsToCopy) {
   const src = path.join(rootDir, dir);
   if (fs.existsSync(src)) {
